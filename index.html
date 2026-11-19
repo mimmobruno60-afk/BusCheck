@@ -1677,7 +1677,8 @@
       });
     }
   </script>
-  <script type="module">
+  <script type="module"import { collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+>
   /import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 / Import the functions you need from the SDKs you need
   import { initializeApp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
@@ -1699,7 +1700,19 @@
 
   const db = getFirestore(app);
     Initialize Firebase
-  const app = initializeApp(firebaseConfig);
+  const app = const colRef = collection(db, "Statiautobus");
+
+onSnapshot(colRef, (snapshot) => {
+  const datiAggiornati = snapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  }));
+  console.log("Aggiornamento in tempo reale:", datiAggiornati);
+  // Qui aggiorni lo stato o gli elementi DOM della tua app
+}, (error) => {
+  console.error("Errore onSnapshot:", error);
+});
+    initializeApp(firebaseConfig);
   const analytics = getAnalytics(app);
   </script>
 </body>
