@@ -1,0 +1,1668 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BusCheck — Appello Pullman &amp; Punti di Ritrovo</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="BusCheck">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f1f5f9;
+      color: #0f172a;
+    }
+    @keyframes pulseRing {
+      0% { transform: scale(0.96); opacity: 0.65; }
+      70% { transform: scale(1.05); opacity: 0; }
+      100% { transform: scale(1.05); opacity: 0; }
+    }
+    .pulse-ring {
+      animation: pulseRing 2.2s infinite;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- Barra Superiore (Header) -->
+  <header class="bg-slate-900 text-white shadow-md sticky top-0 z-30">
+    <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2.5 cursor-pointer" onclick="switchView('home')">
+        <div class="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center text-slate-950 font-extrabold shadow-sm">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 6v6"/><path d="M15 6v6"/><path d="M2 12h19.6"/><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4a2 2 0 0 0-2 2v10h3"/><circle cx="7" cy="18" r="2"/><path d="M9 18h5"/><circle cx="16" cy="18" r="2"/>
+          </svg>
+        </div>
+        <div>
+          <span class="font-bold text-lg tracking-tight block leading-none">BusCheck</span>
+          <span class="text-[11px] text-slate-400 font-medium">Appello &amp; Presenze Viaggio</span>
+        </div>
+      </div>
+
+      <!-- Selettore Rapido Ruolo -->
+      <div class="flex items-center gap-1.5 bg-slate-800 p-1 rounded-xl border border-slate-700">
+        <button id="nav-home" onclick="switchView('home')" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold transition text-slate-300 hover:text-white">
+          Home
+        </button>
+        <button id="nav-organizer" onclick="switchView('organizer')" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold transition text-slate-300 hover:text-white">
+          Responsabile
+        </button>
+        <button id="nav-passenger" onclick="switchView('passenger')" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold transition text-slate-300 hover:text-white">
+          Passeggero
+        </button>
+        <button id="nav-split" onclick="switchView('split')" class="hidden md:inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition text-slate-300 hover:text-white" title="Monitoraggio affiancato Responsabile + Passeggero">
+          Vista Doppia
+        </button>
+        <button id="install-app-btn" onclick="triggerInstallPrompt()" class="hidden px-2.5 py-1.5 rounded-lg text-xs font-extrabold bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition items-center gap-1 shadow-xs" title="Installa BusCheck sul dispositivo">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>
+          </svg>
+          <span>Installa</span>
+        </button>
+        <button onclick="openInfoModal()" title="Guida all'uso" class="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-700 transition">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Toast / Messaggi di Notifica -->
+  <div id="toast-container" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-md pointer-events-none flex flex-col gap-2"></div>
+
+  <!-- Contenuto Principale -->
+  <main id="main-container" class="flex-1 max-w-4xl w-full mx-auto px-4 py-6">
+
+    <!-- ==================== VISTA 1: HOME OPERATIVA ==================== -->
+    <section id="view-home" class="space-y-6">
+      <div class="bg-white rounded-2xl p-6 sm:p-7 shadow-sm border border-slate-200">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+              A bordo Pullman
+            </span>
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-800 border border-indigo-200">
+              Punti di Ritrovo &amp; Visite
+            </span>
+          </div>
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider bg-slate-900 text-emerald-400">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            Operativo
+          </span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+          Controlla in un attimo se il gruppo è al completo, sul pullman o al punto di ritrovo.
+        </h1>
+        <p class="mt-2.5 text-slate-600 text-sm sm:text-base leading-relaxed">
+          Condividi un unico <strong>Codice Viaggio</strong> con i partecipanti e gestisci ogni tappa della giornata: salita sul pullman, ritrovo durante le visite guidate o rientro serale, mantenendo lo storico presenze sempre aggiornato.
+        </p>
+      </div>
+
+      <!-- Azioni Principali -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Crea Nuovo Viaggio -->
+        <div onclick="openOrganizerNewTrip()" class="group cursor-pointer bg-white hover:border-slate-900 border-2 border-slate-200 rounded-2xl p-6 shadow-sm transition flex flex-col justify-between">
+          <div>
+            <div class="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center mb-4 group-hover:scale-105 transition">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 5v14"/><path d="M5 12h14"/>
+              </svg>
+            </div>
+            <h2 class="text-xl font-extrabold text-slate-900">Crea Nuovo Viaggio</h2>
+            <p class="text-sm text-slate-600 mt-1.5 leading-relaxed">
+              Sei il <strong>Responsabile Viaggio</strong>? Configura il pullman o il gruppo, genera il codice univoco a 6 caratteri e avvia i punti di controllo.
+            </p>
+          </div>
+          <div class="mt-6">
+            <span class="w-full inline-flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl bg-slate-900 group-hover:bg-slate-800 text-white font-extrabold text-sm transition">
+              Apri Console Responsabile &rarr;
+            </span>
+          </div>
+        </div>
+
+        <!-- Entra come Passeggero -->
+        <div onclick="switchView('passenger')" class="group cursor-pointer bg-white hover:border-emerald-600 border-2 border-slate-200 rounded-2xl p-6 shadow-sm transition flex flex-col justify-between">
+          <div>
+            <div class="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center mb-4 group-hover:scale-105 transition">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 6 9 17l-5-5"/>
+              </svg>
+            </div>
+            <h2 class="text-xl font-extrabold text-slate-900">Entra come Passeggero</h2>
+            <p class="text-sm text-slate-600 mt-1.5 leading-relaxed">
+              Inserisci il <strong>Codice Viaggio</strong> ricevuto dal responsabile e conferma con un tocco la tua presenza a bordo o al punto di ritrovo.
+            </p>
+          </div>
+          <div class="mt-6">
+            <span class="w-full inline-flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl bg-emerald-600 group-hover:bg-emerald-700 text-white font-extrabold text-sm transition">
+              Conferma Presenza &rarr;
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Viaggi Salvati su Questo Dispositivo -->
+      <div id="saved-trips-section" class="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200 space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h2 class="text-base font-extrabold text-slate-900">Viaggi Attivi su Questo Dispositivo</h2>
+            <p class="text-xs text-slate-500">Riprendi un viaggio già configurato o gestisci i codici creati.</p>
+          </div>
+          <button onclick="openOrganizerNewTrip()" class="text-xs font-extrabold text-slate-900 hover:text-emerald-700 underline self-start sm:self-auto">
+            + Nuovo Viaggio
+          </button>
+        </div>
+        <div id="saved-trips-list" class="divide-y divide-slate-100"></div>
+      </div>
+    </section>
+
+    <!-- ==================== CONTENITORE WORKSPACE (ORGANIZER / PASSENGER / SPLIT) ==================== -->
+    <div id="workspace-grid" class="hidden grid-cols-1 gap-6">
+
+      <!-- ==================== VISTA 2: MODALITÀ RESPONSABILE ==================== -->
+      <section id="view-organizer" class="space-y-5">
+
+        <!-- Form Crea Nuovo Viaggio -->
+        <div id="organizer-setup-card" class="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200">
+          <div class="flex items-center justify-between gap-2 mb-4">
+            <div>
+              <h2 class="text-xl font-extrabold text-slate-900">Crea un Nuovo Viaggio / Gruppo</h2>
+              <p class="text-xs sm:text-sm text-slate-500">Genera un codice viaggio univoco e imposta il primo punto di controllo.</p>
+            </div>
+            <button id="cancel-create-btn" onclick="toggleCreateForm(false)" class="hidden text-xs font-bold text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-lg bg-slate-100">
+              Torna al Viaggio
+            </button>
+          </div>
+
+          <form onsubmit="createNewTrip(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="sm:col-span-2">
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Nome Viaggio &amp; Pullman / Gruppo *</label>
+              <input id="trip-name-input" type="text" required placeholder="Es. Tour Costiera &amp; Borghi — Pullman 01" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-900 text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Numero Posti / Partecipanti Attesi *</label>
+              <input id="trip-capacity-input" type="number" min="1" max="500" value="40" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-900 text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Tipo Primo Check *</label>
+              <select id="trip-first-check-type" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-900 text-sm bg-white font-medium">
+                <option value="bus">A bordo Pullman</option>
+                <option value="meeting">Punto di Ritrovo / Visita Esterna</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Nome Prima Tappa / Check *</label>
+              <input id="trip-checkpoint-input" type="text" required placeholder="Es. 1. Imbarco Pullman — Partenza" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-900 text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Luogo Esatto &amp; Orario Limite</label>
+              <div class="flex gap-2">
+                <input id="trip-location-input" type="text" placeholder="Es. Piazzale Stazione" class="flex-1 px-3 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-900 text-sm">
+                <input id="trip-time-input" type="time" value="08:30" class="w-28 px-2.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-900 text-sm">
+              </div>
+            </div>
+            <div class="sm:col-span-2 flex items-center justify-end gap-3 pt-2 border-t border-slate-100">
+              <button type="submit" class="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-sm shadow-sm transition">
+                Genera Codice Viaggio
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Dashboard Attiva del Responsabile -->
+        <div id="organizer-dashboard" class="hidden space-y-5">
+
+          <!-- 1. Intestazione Viaggio + Codice Copiabile -->
+          <div class="bg-slate-900 text-white rounded-2xl p-5 shadow-md">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    Controllo Attivo
+                  </span>
+                  <button onclick="toggleCreateForm(true)" class="text-xs text-slate-300 hover:text-white underline font-medium">
+                    + Nuovo Viaggio
+                  </button>
+                  <button onclick="switchView('home')" class="text-xs text-slate-300 hover:text-white underline font-medium">
+                    Tutti i viaggi
+                  </button>
+                </div>
+                <h2 id="dash-trip-name" class="text-xl sm:text-2xl font-extrabold mt-1.5 tracking-tight">-</h2>
+                <p class="text-xs text-slate-400 mt-0.5">
+                  Capienza attesa: <span id="dash-capacity" class="text-slate-200 font-bold">0</span> persone &bull;
+                  Registrati in app: <span id="dash-registered-inline" class="text-slate-200 font-bold">0</span>
+                </p>
+              </div>
+
+              <!-- Box Codice Viaggio -->
+              <div class="bg-slate-800 border border-slate-700 rounded-2xl p-3.5 flex items-center justify-between sm:justify-end gap-4">
+                <div>
+                  <span class="block text-[10px] font-bold uppercase tracking-widest text-slate-400">Codice Viaggio</span>
+                  <span id="dash-trip-code" class="font-mono text-2xl sm:text-3xl font-extrabold tracking-widest text-emerald-400">------</span>
+                </div>
+                <button onclick="copyTripCode()" class="px-3.5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs flex items-center gap-1.5 transition shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+                  </svg>
+                  Copia
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. Selettore & Gestione Punti di Controllo -->
+          <div class="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-slate-200 space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 class="text-sm font-extrabold uppercase tracking-wider text-slate-800">Punti di Controllo &amp; Tappe del Viaggio</h3>
+                <p class="text-xs text-slate-500 mt-0.5">Seleziona una tappa per consultare lo storico o impostare il controllo corrente per i passeggeri.</p>
+              </div>
+              <button onclick="openNewCheckModal()" class="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs shadow-xs transition flex items-center justify-center gap-1.5 shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 5v14"/><path d="M5 12h14"/>
+                </svg>
+                Nuovo Check / Punto di Ritrovo
+              </button>
+            </div>
+
+            <!-- Barra Tappe -->
+            <div id="checkpoints-bar" class="grid grid-cols-1 sm:grid-cols-3 gap-2.5"></div>
+
+            <!-- Dettaglio Tappa Selezionata -->
+            <div id="selected-check-banner" class="rounded-xl p-3.5 border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div class="space-y-1">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span id="sel-check-type-badge" class="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold">Punto di Ritrovo</span>
+                  <span id="sel-check-live-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-600 text-white">Check Attivo Ora</span>
+                </div>
+                <h4 id="sel-check-title" class="text-base sm:text-lg font-extrabold text-slate-900">-</h4>
+                <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-medium text-slate-700">
+                  <span>Luogo: <strong id="sel-check-location">-</strong></span>
+                  <span>Orario limite: <strong id="sel-check-time">--:--</strong></span>
+                </div>
+              </div>
+              <div id="activate-check-btn-wrap" class="hidden shrink-0">
+                <button onclick="activateSelectedCheckpoint()" class="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition">
+                  Imposta come Check Attivo
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. Riepilogo Visivo Immediato della Tappa Selezionata -->
+          <div class="grid grid-cols-3 gap-3">
+            <div class="bg-emerald-50 border-2 border-emerald-300 rounded-2xl p-3.5 sm:p-4 text-center">
+              <span class="block text-[11px] sm:text-xs font-extrabold uppercase tracking-wider text-emerald-900">Presenti</span>
+              <span id="stat-present" class="block text-3xl sm:text-4xl font-extrabold text-emerald-700 mt-1">0</span>
+              <span id="stat-present-sub" class="text-[11px] text-emerald-800 font-semibold">Confermati</span>
+            </div>
+            <div class="bg-rose-50 border-2 border-rose-300 rounded-2xl p-3.5 sm:p-4 text-center">
+              <span class="block text-[11px] sm:text-xs font-extrabold uppercase tracking-wider text-rose-900">Mancanti</span>
+              <span id="stat-missing" class="block text-3xl sm:text-4xl font-extrabold text-rose-700 mt-1">0</span>
+              <span class="text-[11px] text-rose-800 font-semibold">In attesa</span>
+            </div>
+            <div class="bg-white border-2 border-slate-200 rounded-2xl p-3.5 sm:p-4 text-center">
+              <span class="block text-[11px] sm:text-xs font-extrabold uppercase tracking-wider text-slate-600">Totale Gruppo</span>
+              <span id="stat-total" class="block text-3xl sm:text-4xl font-extrabold text-slate-900 mt-1">0</span>
+              <span id="stat-capacity-label" class="text-[11px] text-slate-500 font-semibold">su 0 attesi</span>
+            </div>
+          </div>
+
+          <!-- Barra di Avanzamento + Avviso Stato -->
+          <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 space-y-3">
+            <div class="flex items-center justify-between text-xs font-extrabold">
+              <span class="text-slate-700">Avanzamento Controllo Tappa</span>
+              <span id="progress-label" class="text-emerald-700">0% completato</span>
+            </div>
+            <div class="w-full h-3.5 bg-slate-200 rounded-full overflow-hidden">
+              <div id="progress-bar" class="h-full bg-emerald-500 transition-all duration-500 rounded-full" style="width: 0%"></div>
+            </div>
+            <div id="status-alert-box" class="text-xs sm:text-sm font-bold rounded-xl px-3.5 py-2.5 text-center border">
+              Controllo in corso...
+            </div>
+          </div>
+
+          <!-- 4. Azioni Operative per il Responsabile -->
+          <div class="bg-slate-100 border border-slate-200 rounded-2xl p-3.5 flex flex-wrap items-center justify-between gap-2.5">
+            <div class="flex flex-wrap items-center gap-2">
+              <button onclick="openReminderModal()" class="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-xs shadow-xs transition">
+                Prepara Avviso Ritrovo Mancanti
+              </button>
+              <button onclick="exportCheckpointCsv()" class="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-900 border border-slate-300 font-bold text-xs transition">
+                Esporta Report CSV
+              </button>
+            </div>
+            <button onclick="openAddPassengerModal()" class="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition">
+              + Aggiungi Passeggero
+            </button>
+          </div>
+
+          <!-- 5. Lista Passeggeri con Filtri -->
+          <div class="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-slate-200 space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <!-- Tabs Filtro -->
+              <div class="inline-flex rounded-xl bg-slate-100 p-1 self-start">
+                <button id="filter-all" onclick="setFilter('all')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition bg-white text-slate-900 shadow-xs">
+                  Tutti (<span id="count-all">0</span>)
+                </button>
+                <button id="filter-missing" onclick="setFilter('missing')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition text-slate-600 hover:text-slate-900">
+                  Solo Mancanti (<span id="count-missing">0</span>)
+                </button>
+                <button id="filter-present" onclick="setFilter('present')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition text-slate-600 hover:text-slate-900">
+                  Presenti (<span id="count-present">0</span>)
+                </button>
+              </div>
+
+              <!-- Ricerca -->
+              <div class="relative flex-1 sm:max-w-xs">
+                <input id="search-passenger-input" oninput="renderOrganizerDashboard()" type="text" placeholder="Cerca nome, telefono o nota..." class="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-slate-900">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                </svg>
+              </div>
+            </div>
+
+            <!-- Elenco Passeggeri -->
+            <div id="passenger-list" class="divide-y divide-slate-100"></div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ==================== VISTA 3: MODALITÀ PASSEGGERO ==================== -->
+      <section id="view-passenger" class="space-y-5">
+
+        <!-- Step A: Accesso al Viaggio tramite Codice -->
+        <div id="passenger-join-card" class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 space-y-5 max-w-lg mx-auto">
+          <div>
+            <span class="inline-block px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 mb-2">
+              Area Passeggero
+            </span>
+            <h2 class="text-2xl font-extrabold text-slate-900">Entra nel tuo gruppo</h2>
+            <p class="text-sm text-slate-600 mt-1">
+              Inserisci il <strong>Codice Viaggio</strong> comunicato dal responsabile e il tuo nominativo per confermare la presenza a ogni tappa.
+            </p>
+          </div>
+
+          <form onsubmit="joinTripAsPassenger(event)" class="space-y-4">
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Codice Viaggio *</label>
+              <input id="join-code-input" type="text" maxlength="8" required placeholder="Es. GRP719" class="w-full px-4 py-3 rounded-xl border-2 border-slate-300 focus:border-emerald-600 focus:outline-none font-mono text-xl font-extrabold uppercase tracking-widest text-center">
+            </div>
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Nome e Cognome *</label>
+              <input id="join-name-input" type="text" required placeholder="Es. Marco Ferretti" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-emerald-600 focus:outline-none text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Telefono (opzionale)</label>
+              <input id="join-phone-input" type="tel" placeholder="Es. 333 1234567" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-emerald-600 focus:outline-none text-sm">
+            </div>
+            <button type="submit" class="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-base shadow-sm transition">
+              Entra nel Viaggio
+            </button>
+          </form>
+        </div>
+
+        <!-- Step B: Schermata Passeggero Connesso -->
+        <div id="passenger-active-card" class="hidden space-y-4 max-w-lg mx-auto">
+          <div class="bg-slate-900 text-white rounded-2xl p-5 shadow-md space-y-4">
+            <div class="flex items-center justify-between gap-2">
+              <span class="font-mono text-xs font-extrabold px-2.5 py-1 rounded-lg bg-slate-800 text-emerald-400 border border-slate-700">
+                CODICE: <span id="pax-trip-code">------</span>
+              </span>
+              <button onclick="leavePassengerSession()" class="text-xs text-slate-300 hover:text-white underline font-medium">
+                Cambia utente / viaggio
+              </button>
+            </div>
+
+            <div>
+              <h2 id="pax-trip-name" class="text-lg sm:text-xl font-extrabold leading-snug">-</h2>
+              <p class="text-xs text-slate-300 mt-1">
+                Passeggero: <strong id="pax-user-name" class="text-white">-</strong>
+                <span id="pax-user-badge" class="ml-1.5 font-mono text-[11px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">#P01</span>
+              </p>
+            </div>
+
+            <!-- Box Check Attivo -->
+            <div class="p-4 rounded-2xl bg-slate-800 border-2 border-indigo-400/60 space-y-2">
+              <div class="flex items-center justify-between gap-2 flex-wrap">
+                <span id="pax-check-type-badge" class="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-indigo-500 text-white">
+                  Punto di Ritrovo
+                </span>
+                <span class="text-xs font-extrabold text-amber-300">
+                  Entro le <span id="pax-check-time">--:--</span>
+                </span>
+              </div>
+              <h3 id="pax-checkpoint" class="text-lg sm:text-xl font-extrabold text-white">-</h3>
+              <p class="text-xs sm:text-sm text-slate-200">
+                Luogo: <strong id="pax-check-location" class="text-emerald-300">-</strong>
+              </p>
+            </div>
+          </div>
+
+          <!-- Stato DA CONFERMARE -->
+          <div id="pax-unconfirmed-box" class="bg-white rounded-2xl p-6 shadow-sm border-2 border-amber-400 text-center space-y-5">
+            <div>
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-amber-100 text-amber-950">
+                In attesa della tua conferma per questa tappa
+              </span>
+              <p id="pax-instruction-text" class="text-sm text-slate-700 mt-2.5 font-medium">
+                Quando sei arrivato al punto di controllo, premi il pulsante qui sotto.
+              </p>
+            </div>
+
+            <div class="relative inline-flex items-center justify-center w-full">
+              <span class="pulse-ring absolute inset-0 rounded-2xl bg-emerald-500 pointer-events-none"></span>
+              <button onclick="confirmMyPresence()" class="relative w-full py-5 px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.99] text-white font-extrabold text-lg sm:text-xl shadow-lg transition flex flex-col items-center justify-center gap-1">
+                <span>SONO QUI / CONFERMA PRESENZA</span>
+                <span class="text-xs font-bold text-emerald-100 uppercase tracking-wider">Tocca per registrarti subito</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Stato CONFERMATO -->
+          <div id="pax-confirmed-box" class="hidden bg-emerald-600 text-white rounded-2xl p-6 shadow-md text-center space-y-3">
+            <div class="w-16 h-16 rounded-full bg-white text-emerald-600 mx-auto flex items-center justify-center shadow-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-9 h-9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 6 9 17l-5-5"/>
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-2xl font-extrabold">Presenza Confermata</h3>
+              <p id="pax-confirmed-summary" class="text-sm font-bold text-emerald-50 mt-1"></p>
+              <p id="pax-distance-badge" class="hidden inline-block mt-2.5 px-3 py-1 rounded-full bg-emerald-800/80 text-xs font-bold text-emerald-50"></p>
+            </div>
+            <p class="text-xs text-emerald-100 max-w-sm mx-auto pt-1">
+              Il responsabile del viaggio visualizza la tua presenza tra i <strong>Presenti</strong>. All'avvio della tappa successiva ti verrà richiesta una nuova conferma.
+            </p>
+          </div>
+
+          <!-- Condivisione Posizione -->
+          <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 flex items-center justify-between gap-3">
+            <div>
+              <p class="text-xs font-extrabold text-slate-900">Condividi posizione attuale</p>
+              <p id="gps-status-text" class="text-[11px] text-slate-600 mt-0.5">Facoltativo: aggiorna il responsabile sulla tua posizione.</p>
+            </div>
+            <button id="gps-toggle-btn" onclick="requestPassengerLocation()" class="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shrink-0 transition">
+              Condividi Posizione
+            </button>
+          </div>
+
+          <!-- Segnalazione Rapida al Responsabile -->
+          <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 space-y-3">
+            <p class="text-xs font-extrabold uppercase tracking-wider text-slate-700">Invia segnalazione rapida al responsabile</p>
+            <div class="flex flex-wrap gap-1.5">
+              <button type="button" onclick="sendQuickNote('Sto arrivando, pochi minuti')" class="px-3 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-xs font-bold text-amber-950 border border-amber-200 transition">
+                Sto arrivando, pochi minuti
+              </button>
+              <button type="button" onclick="sendQuickNote('Sono già sul pullman')" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-800 transition">
+                Sono già sul pullman
+              </button>
+              <button type="button" onclick="sendQuickNote('Richiedo assistenza')" class="px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-xs font-bold text-rose-900 border border-rose-200 transition">
+                Richiedo assistenza
+              </button>
+            </div>
+            <form onsubmit="sendCustomNote(event)" class="flex gap-2">
+              <input id="custom-note-input" type="text" placeholder="Scrivi un messaggio breve al responsabile..." class="flex-1 px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:border-slate-900">
+              <button type="submit" class="px-3.5 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition">
+                Invia
+              </button>
+            </form>
+            <p id="pax-current-note" class="hidden text-xs font-semibold text-slate-800 bg-amber-50 p-2.5 rounded-xl border border-amber-200"></p>
+          </div>
+        </div>
+
+      </section>
+
+    </div>
+
+  </main>
+
+  <!-- ==================== MODAL: NUOVO CHECK / PUNTO DI RITROVO ==================== -->
+  <div id="new-check-modal" class="hidden fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div>
+          <h3 class="text-lg font-extrabold text-slate-900">Nuovo Check / Punto di Ritrovo</h3>
+          <p class="text-xs text-slate-500">Avvia un nuovo appello mantenendo salvato lo storico delle tappe precedenti.</p>
+        </div>
+        <button onclick="closeNewCheckModal()" class="text-slate-400 hover:text-slate-700 font-bold text-xl leading-none">&times;</button>
+      </div>
+      <form onsubmit="createNewCheckpoint(event)" class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Tipo di Controllo *</label>
+          <div class="grid grid-cols-2 gap-2">
+            <label class="cursor-pointer">
+              <input type="radio" name="new-check-type" value="meeting" checked class="peer sr-only">
+              <div class="p-2.5 rounded-xl border-2 border-slate-200 peer-checked:border-indigo-600 peer-checked:bg-indigo-50 text-center text-xs font-extrabold text-slate-800">
+                Punto di Ritrovo / Visita
+              </div>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="new-check-type" value="bus" class="peer sr-only">
+              <div class="p-2.5 rounded-xl border-2 border-slate-200 peer-checked:border-emerald-600 peer-checked:bg-emerald-50 text-center text-xs font-extrabold text-slate-800">
+                A bordo Pullman
+              </div>
+            </label>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Nome della Tappa / Check *</label>
+          <input id="new-check-title" type="text" required placeholder="Es. Ritrovo Centro Storico" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600">
+        </div>
+        <div class="grid grid-cols-3 gap-2">
+          <div class="col-span-2">
+            <label class="block text-xs font-bold text-slate-700 mb-1">Luogo Esatto di Ritrovo *</label>
+            <input id="new-check-location" type="text" required placeholder="Es. Ingresso Principale / Piazza" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Orario *</label>
+            <input id="new-check-time" type="time" required value="16:00" class="w-full px-2.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600">
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeNewCheckModal()" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold">Annulla</button>
+          <button type="submit" class="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-extrabold">Avvia Nuovo Check</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: INVIA PROMEMORIA / AVVISO RITROVO ==================== -->
+  <div id="reminder-modal" class="hidden fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 class="text-lg font-extrabold text-slate-900">Avviso Ritrovo per i Mancanti</h3>
+        <button onclick="closeReminderModal()" class="text-slate-400 hover:text-slate-700 font-bold text-xl leading-none">&times;</button>
+      </div>
+      <div class="space-y-3">
+        <p class="text-xs text-slate-600">
+          Destinatari ancora mancanti per questa tappa: <strong id="reminder-missing-names" class="text-rose-700">-</strong>
+        </p>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Messaggio pronto da copiare e inviare al gruppo:</label>
+          <textarea id="reminder-message-text" rows="5" class="w-full p-3 rounded-xl border border-slate-300 bg-slate-50 text-xs sm:text-sm text-slate-900 font-medium focus:outline-none"></textarea>
+        </div>
+      </div>
+      <div class="flex flex-wrap justify-end gap-2 pt-1">
+        <button type="button" onclick="closeReminderModal()" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold">Chiudi</button>
+        <button type="button" onclick="copyReminderMessage()" class="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-extrabold">
+          Copia Messaggio
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: AGGIUNGI PASSEGGERO MANUALE ==================== -->
+  <div id="add-passenger-modal" class="hidden fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-lg font-extrabold text-slate-900">Aggiungi Passeggero</h3>
+        <button onclick="closeAddPassengerModal()" class="text-slate-400 hover:text-slate-700 font-bold text-lg">&times;</button>
+      </div>
+      <p class="text-xs text-slate-500">Registra un partecipante direttamente dalla console responsabile.</p>
+      <form onsubmit="addManualPassenger(event)" class="space-y-3">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Nome e Cognome *</label>
+          <input id="manual-pax-name" type="text" required placeholder="Es. Mario Rossi" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Telefono (opzionale)</label>
+          <input id="manual-pax-phone" type="tel" placeholder="Es. 340 9876543" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900">
+        </div>
+        <label class="flex items-center gap-2 text-xs font-semibold text-slate-700 pt-1">
+          <input id="manual-pax-present" type="checkbox" checked class="w-4 h-4 rounded text-emerald-600">
+          Segna subito come Presente nella tappa corrente
+        </label>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeAddPassengerModal()" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold">Annulla</button>
+          <button type="submit" class="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold">Aggiungi</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: GUIDA ALL'USO ==================== -->
+  <div id="info-modal" class="hidden fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl space-y-4 max-h-[85vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 class="text-lg font-extrabold text-slate-900">Guida Rapida BusCheck</h3>
+        <button onclick="closeInfoModal()" class="text-slate-400 hover:text-slate-700 font-bold text-xl leading-none">&times;</button>
+      </div>
+      <div class="space-y-3 text-xs sm:text-sm text-slate-600 leading-relaxed">
+        <p>
+          <strong>1. Controlli Multipli:</strong> il responsabile può creare diversi punti di controllo durante la giornata (salita sul pullman, ritrovi intermedi, rientri). Ogni tappa registra presenze e orari in modo indipendente.
+        </p>
+        <p>
+          <strong>2. Accesso Passeggeri:</strong> i partecipanti entrano con il <strong>Codice Viaggio</strong> a 6 caratteri e confermano la presenza con un tocco. Possono inoltre inviare note rapide o condividere la posizione.
+        </p>
+        <p>
+          <strong>3. Esportazione e Storico:</strong> ogni tappa rimane consultabile in qualsiasi momento ed è esportabile in formato CSV per archivio o rendicontazione.
+        </p>
+      </div>
+      <div class="pt-2 flex justify-end">
+        <button onclick="closeInfoModal()" class="px-5 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-bold">Chiudi</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ==================== STATO E PERSISTENZA ====================
+    const STORAGE_KEY = 'buscheck_prod_trips_v1';
+    const SESSION_KEY = 'buscheck_prod_session_v1';
+    const channel = ('BroadcastChannel' in window) ? new BroadcastChannel('buscheck_prod_sync_v1') : null;
+
+    let appState = {
+      trips: {},
+      activeOrganizerCode: null,
+      selectedCheckId: null,
+      passengerSession: null
+    };
+
+    let currentView = 'home';
+    let currentFilter = 'all';
+
+    function loadState() {
+      try {
+        const rawTrips = localStorage.getItem(STORAGE_KEY);
+        if (rawTrips) {
+          appState.trips = JSON.parse(rawTrips) || {};
+        }
+        const rawSession = localStorage.getItem(SESSION_KEY);
+        if (rawSession) {
+          const parsed = JSON.parse(rawSession) || {};
+          appState.activeOrganizerCode = parsed.activeOrganizerCode || null;
+          appState.selectedCheckId = parsed.selectedCheckId || null;
+          appState.passengerSession = parsed.passengerSession || null;
+        }
+      } catch (e) {
+        console.error('Errore caricamento stato:', e);
+      }
+    }
+
+    function saveState(broadcast = true) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(appState.trips));
+        localStorage.setItem(SESSION_KEY, JSON.stringify({
+          activeOrganizerCode: appState.activeOrganizerCode,
+          selectedCheckId: appState.selectedCheckId,
+          passengerSession: appState.passengerSession
+        }));
+        if (broadcast && channel) {
+          channel.postMessage({ type: 'SYNC_TRIPS', trips: appState.trips });
+        }
+      } catch (e) {
+        console.error('Errore salvataggio stato:', e);
+      }
+    }
+
+    if (channel) {
+      channel.onmessage = (event) => {
+        if (event.data && event.data.type === 'SYNC_TRIPS') {
+          appState.trips = event.data.trips || {};
+          refreshCurrentView();
+        }
+      };
+    }
+
+    window.addEventListener('storage', (event) => {
+      if (event.key === STORAGE_KEY && event.newValue) {
+        try {
+          appState.trips = JSON.parse(event.newValue) || {};
+          refreshCurrentView();
+        } catch (e) {}
+      }
+    });
+
+    // ==================== UTILITY ====================
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      const colors = {
+        success: 'bg-emerald-900 text-white border-emerald-700',
+        warning: 'bg-amber-900 text-white border-amber-700',
+        error: 'bg-rose-900 text-white border-rose-700',
+        info: 'bg-slate-900 text-white border-slate-700'
+      };
+      toast.className = `pointer-events-auto px-4 py-3 rounded-xl border shadow-lg text-xs sm:text-sm font-semibold flex items-center justify-between gap-2 transition-all ${colors[type] || colors.info}`;
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 250);
+      }, 3200);
+    }
+
+    function formatTimeNow() {
+      const now = new Date();
+      return now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function generateTripCode() {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let code = '';
+      for (let i = 0; i < 6; i++) {
+        code += chars[Math.floor(Math.random() * chars.length)];
+      }
+      return appState.trips[code] ? generateTripCode() : code;
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function getActiveCheck(trip) {
+      if (!trip || !trip.checkpoints || trip.checkpoints.length === 0) return null;
+      return trip.checkpoints.find(c => c.id === trip.activeCheckId) || trip.checkpoints[trip.checkpoints.length - 1];
+    }
+
+    function getSelectedCheck(trip) {
+      if (!trip || !trip.checkpoints || trip.checkpoints.length === 0) return null;
+      return trip.checkpoints.find(c => c.id === appState.selectedCheckId) || getActiveCheck(trip);
+    }
+
+    // ==================== RENDER VIAGGI SALVATI IN HOME ====================
+    function renderSavedTrips() {
+      const listEl = document.getElementById('saved-trips-list');
+      const tripsArray = Object.values(appState.trips);
+
+      if (tripsArray.length === 0) {
+        listEl.innerHTML = `
+          <div class="py-6 text-center text-slate-500 text-sm">
+            Nessun viaggio ancora creato su questo dispositivo. Clicca su <strong>Crea Nuovo Viaggio</strong> per iniziare.
+          </div>`;
+        return;
+      }
+
+      listEl.innerHTML = tripsArray.map(trip => {
+        const activeChk = getActiveCheck(trip);
+        const paxCount = (trip.passengers || []).length;
+        const presentCount = activeChk
+          ? (trip.passengers || []).filter(p => activeChk.records && activeChk.records[p.id] && activeChk.records[p.id].present).length
+          : 0;
+
+        return `
+          <div class="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="space-y-0.5">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="font-mono text-xs font-extrabold px-2 py-0.5 rounded bg-slate-100 text-slate-900 border border-slate-200">${escapeHtml(trip.code)}</span>
+                <span class="font-extrabold text-slate-900 text-sm sm:text-base">${escapeHtml(trip.name)}</span>
+              </div>
+              <p class="text-xs text-slate-500">
+                Tappa attiva: <strong class="text-slate-700">${escapeHtml(activeChk ? activeChk.title : '-')}</strong> &bull;
+                Presenti: <strong class="text-emerald-700">${presentCount}/${paxCount}</strong> (capienza ${trip.capacity})
+              </p>
+            </div>
+            <div class="flex items-center gap-2 self-end sm:self-center shrink-0">
+              <button onclick="openSavedTrip('${escapeHtml(trip.code)}')" class="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition">
+                Apri Console
+              </button>
+              <button onclick="deleteTrip('${escapeHtml(trip.code)}')" title="Elimina viaggio" class="px-2.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition">
+                Elimina
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function openSavedTrip(code) {
+      if (!appState.trips[code]) return;
+      appState.activeOrganizerCode = code;
+      const activeChk = getActiveCheck(appState.trips[code]);
+      appState.selectedCheckId = activeChk ? activeChk.id : null;
+      saveState(false);
+      switchView('organizer');
+    }
+
+    function deleteTrip(code) {
+      if (!appState.trips[code]) return;
+      delete appState.trips[code];
+      if (appState.activeOrganizerCode === code) {
+        appState.activeOrganizerCode = null;
+        appState.selectedCheckId = null;
+      }
+      if (appState.passengerSession && appState.passengerSession.code === code) {
+        appState.passengerSession = null;
+      }
+      saveState();
+      renderSavedTrips();
+      showToast(`Viaggio ${code} rimosso.`, 'info');
+    }
+
+    // ==================== NAVIGAZIONE VISTE ====================
+    function switchView(view) {
+      currentView = view;
+      const homeEl = document.getElementById('view-home');
+      const workspaceEl = document.getElementById('workspace-grid');
+      const orgEl = document.getElementById('view-organizer');
+      const paxEl = document.getElementById('view-passenger');
+      const mainEl = document.getElementById('main-container');
+
+      if (view === 'home') {
+        homeEl.classList.remove('hidden');
+        workspaceEl.classList.add('hidden');
+        mainEl.classList.remove('max-w-6xl');
+        mainEl.classList.add('max-w-4xl');
+        renderSavedTrips();
+      } else {
+        homeEl.classList.add('hidden');
+        workspaceEl.classList.remove('hidden');
+
+        if (view === 'split') {
+          mainEl.classList.remove('max-w-4xl');
+          mainEl.classList.add('max-w-6xl');
+          workspaceEl.classList.add('lg:grid-cols-12');
+          orgEl.classList.remove('hidden');
+          paxEl.classList.remove('hidden');
+          orgEl.classList.add('lg:col-span-7');
+          paxEl.classList.add('lg:col-span-5');
+        } else {
+          mainEl.classList.remove('max-w-6xl');
+          mainEl.classList.add('max-w-4xl');
+          workspaceEl.classList.remove('lg:grid-cols-12');
+          orgEl.classList.remove('lg:col-span-7');
+          paxEl.classList.remove('lg:col-span-5');
+          orgEl.classList.toggle('hidden', view !== 'organizer');
+          paxEl.classList.toggle('hidden', view !== 'passenger');
+        }
+      }
+
+      ['home', 'organizer', 'passenger', 'split'].forEach(id => {
+        const btn = document.getElementById(`nav-${id}`);
+        if (!btn) return;
+        if (id === view) {
+          btn.classList.add('bg-emerald-500', 'text-slate-950');
+          btn.classList.remove('text-slate-300');
+        } else {
+          btn.classList.remove('bg-emerald-500', 'text-slate-950');
+          btn.classList.add('text-slate-300');
+        }
+      });
+
+      refreshCurrentView();
+    }
+
+    function refreshCurrentView() {
+      if (currentView === 'home') {
+        renderSavedTrips();
+      }
+      if (currentView === 'organizer' || currentView === 'split') {
+        renderOrganizerView();
+      }
+      if (currentView === 'passenger' || currentView === 'split') {
+        renderPassengerView();
+      }
+    }
+
+    function openOrganizerNewTrip() {
+      switchView('organizer');
+      toggleCreateForm(true);
+    }
+
+    // ==================== LOGICA RESPONSABILE ====================
+    function toggleCreateForm(show) {
+      const setupCard = document.getElementById('organizer-setup-card');
+      const dash = document.getElementById('organizer-dashboard');
+      const cancelBtn = document.getElementById('cancel-create-btn');
+
+      if (show) {
+        setupCard.classList.remove('hidden');
+        dash.classList.add('hidden');
+        cancelBtn.classList.toggle('hidden', !appState.activeOrganizerCode);
+      } else if (appState.activeOrganizerCode && appState.trips[appState.activeOrganizerCode]) {
+        setupCard.classList.add('hidden');
+        dash.classList.remove('hidden');
+      }
+    }
+
+    function createNewTrip(event) {
+      event.preventDefault();
+      const name = document.getElementById('trip-name-input').value.trim();
+      const capacity = parseInt(document.getElementById('trip-capacity-input').value, 10) || 40;
+      const checkType = document.getElementById('trip-first-check-type').value;
+      const checkTitle = document.getElementById('trip-checkpoint-input').value.trim();
+      const location = document.getElementById('trip-location-input').value.trim() || 'Punto principale';
+      const targetTime = document.getElementById('trip-time-input').value || '08:30';
+      if (!name || !checkTitle) return;
+
+      const code = generateTripCode();
+      const firstCheckId = 'CHK1';
+      appState.trips[code] = {
+        code,
+        name,
+        capacity,
+        activeCheckId: firstCheckId,
+        passengers: [],
+        checkpoints: [
+          {
+            id: firstCheckId,
+            type: checkType,
+            title: checkTitle,
+            location,
+            targetTime,
+            records: {}
+          }
+        ]
+      };
+      appState.activeOrganizerCode = code;
+      appState.selectedCheckId = firstCheckId;
+      saveState();
+
+      document.getElementById('trip-name-input').value = '';
+      document.getElementById('trip-checkpoint-input').value = '';
+      document.getElementById('trip-location-input').value = '';
+      renderOrganizerView();
+      showToast(`Viaggio creato. Codice univoco: ${code}`, 'success');
+    }
+
+    function renderOrganizerView() {
+      const code = appState.activeOrganizerCode;
+      const trip = code ? appState.trips[code] : null;
+
+      if (!trip) {
+        document.getElementById('organizer-setup-card').classList.remove('hidden');
+        document.getElementById('organizer-dashboard').classList.add('hidden');
+        document.getElementById('cancel-create-btn').classList.add('hidden');
+        return;
+      }
+
+      document.getElementById('organizer-setup-card').classList.add('hidden');
+      document.getElementById('organizer-dashboard').classList.remove('hidden');
+
+      document.getElementById('dash-trip-name').textContent = trip.name;
+      document.getElementById('dash-trip-code').textContent = trip.code;
+      document.getElementById('dash-capacity').textContent = trip.capacity;
+      document.getElementById('dash-registered-inline').textContent = trip.passengers.length;
+
+      renderOrganizerDashboard();
+    }
+
+    function renderOrganizerDashboard() {
+      const trip = appState.trips[appState.activeOrganizerCode];
+      if (!trip) return;
+
+      const activeCheck = getActiveCheck(trip);
+      const selectedCheck = getSelectedCheck(trip);
+      if (!selectedCheck) return;
+
+      const passengers = trip.passengers || [];
+      const totalRegistered = passengers.length;
+
+      const checkpointsBar = document.getElementById('checkpoints-bar');
+      checkpointsBar.innerHTML = trip.checkpoints.map(chk => {
+        const isSelected = chk.id === selectedCheck.id;
+        const isLive = chk.id === activeCheck.id;
+        const presentInChk = passengers.filter(p => chk.records && chk.records[p.id] && chk.records[p.id].present).length;
+        const typeLabel = chk.type === 'bus' ? 'Pullman' : 'Ritrovo';
+        const cardStyle = isSelected
+          ? 'border-slate-900 bg-slate-900 text-white shadow-sm'
+          : 'border-slate-200 bg-slate-50 hover:border-slate-400 text-slate-900';
+
+        return `
+          <button type="button" onclick="selectCheckpoint('${escapeHtml(chk.id)}')" class="text-left p-3 rounded-xl border-2 transition flex flex-col justify-between gap-2 ${cardStyle}">
+            <div class="flex items-center justify-between gap-1.5 w-full">
+              <span class="text-xs font-extrabold truncate">${escapeHtml(chk.title)}</span>
+              ${isLive ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase bg-emerald-500 text-slate-950 shrink-0">Attivo</span>` : ''}
+            </div>
+            <div class="flex items-center justify-between w-full text-[11px] ${isSelected ? 'text-slate-300' : 'text-slate-500'}">
+              <span>${typeLabel} &bull; ${escapeHtml(chk.targetTime || '--:--')}</span>
+              <span class="font-mono font-extrabold px-2 py-0.5 rounded-md ${isSelected ? 'bg-slate-800 text-emerald-400' : 'bg-white text-slate-800 border border-slate-200'}">
+                ${presentInChk}/${totalRegistered}
+              </span>
+            </div>
+          </button>
+        `;
+      }).join('');
+
+      const isSelectedLive = selectedCheck.id === activeCheck.id;
+      const bannerEl = document.getElementById('selected-check-banner');
+      const typeBadgeEl = document.getElementById('sel-check-type-badge');
+      if (selectedCheck.type === 'bus') {
+        bannerEl.className = 'rounded-xl p-3.5 border-2 border-emerald-200 bg-emerald-50/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3';
+        typeBadgeEl.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-emerald-700 text-white';
+        typeBadgeEl.textContent = 'A bordo Pullman';
+      } else {
+        bannerEl.className = 'rounded-xl p-3.5 border-2 border-indigo-200 bg-indigo-50/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3';
+        typeBadgeEl.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-indigo-700 text-white';
+        typeBadgeEl.textContent = 'Punto di Ritrovo Esterno';
+      }
+
+      document.getElementById('sel-check-live-badge').classList.toggle('hidden', !isSelectedLive);
+      document.getElementById('activate-check-btn-wrap').classList.toggle('hidden', isSelectedLive);
+      document.getElementById('sel-check-title').textContent = selectedCheck.title;
+      document.getElementById('sel-check-location').textContent = selectedCheck.location || 'Non specificato';
+      document.getElementById('sel-check-time').textContent = selectedCheck.targetTime || '--:--';
+
+      const records = selectedCheck.records || {};
+      const enriched = passengers.map(p => {
+        const rec = records[p.id] || { present: false, time: null, distance: null, note: '' };
+        return { ...p, ...rec };
+      });
+
+      const presentCount = enriched.filter(p => p.present).length;
+      const missingCount = totalRegistered - presentCount;
+      const percent = totalRegistered > 0 ? Math.round((presentCount / totalRegistered) * 100) : 0;
+
+      document.getElementById('stat-present').textContent = presentCount;
+      document.getElementById('stat-present-sub').textContent = selectedCheck.type === 'bus' ? 'A bordo pullman' : 'Al punto di ritrovo';
+      document.getElementById('stat-missing').textContent = missingCount;
+      document.getElementById('stat-total').textContent = totalRegistered;
+      document.getElementById('stat-capacity-label').textContent = `su ${trip.capacity} attesi`;
+
+      document.getElementById('progress-label').textContent = `${percent}% completato (${presentCount}/${totalRegistered})`;
+      document.getElementById('progress-bar').style.width = `${percent}%`;
+
+      const alertBox = document.getElementById('status-alert-box');
+      const placeLabel = selectedCheck.type === 'bus' ? 'sul pullman' : 'al punto di ritrovo';
+      if (totalRegistered === 0) {
+        alertBox.className = 'text-xs sm:text-sm font-bold rounded-xl px-3.5 py-2.5 text-center border bg-slate-100 text-slate-700 border-slate-200';
+        alertBox.textContent = `Condividi il codice ${trip.code} con i partecipanti o aggiungi i passeggeri per iniziare il controllo.`;
+      } else if (missingCount === 0) {
+        alertBox.className = 'text-xs sm:text-sm font-extrabold rounded-xl px-3.5 py-2.5 text-center border bg-emerald-100 text-emerald-950 border-emerald-300';
+        alertBox.textContent = `Gruppo al completo: tutte le ${totalRegistered} persone risultano presenti ${placeLabel}.`;
+      } else {
+        alertBox.className = 'text-xs sm:text-sm font-extrabold rounded-xl px-3.5 py-2.5 text-center border bg-rose-50 text-rose-900 border-rose-200';
+        alertBox.textContent = `In attesa di conferma per ${missingCount} ${missingCount === 1 ? 'persona' : 'persone'} ${placeLabel}.`;
+      }
+
+      document.getElementById('count-all').textContent = totalRegistered;
+      document.getElementById('count-missing').textContent = missingCount;
+      document.getElementById('count-present').textContent = presentCount;
+
+      const search = (document.getElementById('search-passenger-input').value || '').toLowerCase().trim();
+      const filtered = enriched
+        .filter(p => {
+          if (currentFilter === 'present' && !p.present) return false;
+          if (currentFilter === 'missing' && p.present) return false;
+          if (search) {
+            const hay = `${p.name} ${p.note || ''} ${p.phone || ''}`.toLowerCase();
+            if (!hay.includes(search)) return false;
+          }
+          return true;
+        })
+        .sort((a, b) => Number(a.present) - Number(b.present));
+
+      const listEl = document.getElementById('passenger-list');
+      if (filtered.length === 0) {
+        listEl.innerHTML = `
+          <div class="py-8 text-center text-slate-500 text-sm">
+            ${totalRegistered === 0
+              ? 'Nessun partecipante registrato per questo viaggio.'
+              : 'Nessun partecipante corrisponde ai filtri attivi.'}
+          </div>`;
+        return;
+      }
+
+      listEl.innerHTML = filtered.map(p => {
+        const statusBadge = p.present
+          ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-extrabold bg-emerald-100 text-emerald-900">
+               <span class="w-2 h-2 rounded-full bg-emerald-600"></span> Presente ${p.time ? '&bull; ' + escapeHtml(p.time) : ''}
+             </span>`
+          : `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-extrabold bg-rose-100 text-rose-900">
+               <span class="w-2 h-2 rounded-full bg-rose-600"></span> Mancante
+             </span>`;
+
+        const distanceTag = p.distance
+          ? `<span class="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">
+               ${escapeHtml(p.distance)}
+             </span>`
+          : '';
+
+        const noteTag = p.note
+          ? `<p class="mt-1.5 text-xs font-bold text-amber-950 bg-amber-100/80 border border-amber-300 rounded-lg px-2.5 py-1 inline-block">
+               Nota: "${escapeHtml(p.note)}"
+             </p>`
+          : '';
+
+        const toggleBtnClass = p.present
+          ? 'bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-800 border border-slate-200'
+          : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs';
+
+        return `
+          <div class="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="space-y-1">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="font-mono text-xs font-bold text-slate-400">#${escapeHtml(p.id)}</span>
+                <span class="font-extrabold text-slate-900 text-sm sm:text-base">${escapeHtml(p.name)}</span>
+                ${statusBadge}
+              </div>
+              <div class="flex items-center gap-2 flex-wrap text-xs text-slate-600">
+                ${p.phone ? `<span>Tel: ${escapeHtml(p.phone)}</span>` : ''}
+                ${distanceTag}
+              </div>
+              ${noteTag}
+            </div>
+            <div class="flex items-center gap-2 self-end sm:self-center shrink-0">
+              <button onclick="togglePassengerPresence('${escapeHtml(p.id)}')" class="px-3.5 py-2 rounded-xl text-xs font-extrabold transition ${toggleBtnClass}">
+                ${p.present ? 'Segna Mancante' : 'Segna Presente'}
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function selectCheckpoint(checkId) {
+      appState.selectedCheckId = checkId;
+      saveState(false);
+      renderOrganizerDashboard();
+    }
+
+    function activateSelectedCheckpoint() {
+      const trip = appState.trips[appState.activeOrganizerCode];
+      if (!trip || !appState.selectedCheckId) return;
+      trip.activeCheckId = appState.selectedCheckId;
+      saveState();
+      refreshCurrentView();
+      const chk = getActiveCheck(trip);
+      showToast(`Tappa "${chk.title}" impostata come controllo attivo.`, 'success');
+    }
+
+    function openNewCheckModal() {
+      const trip = appState.trips[appState.activeOrganizerCode];
+      if (!trip) return;
+      const nextNum = trip.checkpoints.length + 1;
+      document.getElementById('new-check-title').value = `${nextNum}. Punto di Ritrovo: `;
+      document.getElementById('new-check-location').value = '';
+      document.getElementById('new-check-modal').classList.remove('hidden');
+      document.getElementById('new-check-title').focus();
+    }
+
+    function closeNewCheckModal() {
+      document.getElementById('new-check-modal').classList.add('hidden');
+    }
+
+    function createNewCheckpoint(event) {
+      event.preventDefault();
+      const trip = appState.trips[appState.activeOrganizerCode];
+      if (!trip) return;
+
+      const typeEl = document.querySelector('input[name="new-check-type"]:checked');
+      const type = typeEl ? typeEl.value : 'meeting';
+      const title = document.getElementById('new-check-title').value.trim();
+      const location = document.getElementById('new-check-location').value.trim();
+      const targetTime = document.getElementById('new-check-time').value || formatTimeNow();
+      if (!title || !location) return;
+
+      const newId = 'CHK' + (trip.checkpoints.length + 1) + '_' + Math.floor(10 + Math.random() * 90);
+      trip.checkpoints.push({
+        id: newId,
+        type,
+        title,
+        location,
+        targetTime,
+        records: {}
+      });
+      trip.activeCheckId = newId;
+      appState.selectedCheckId = newId;
+
+      closeNewCheckModal();
+      saveState();
+      refreshCurrentView();
+      showToast(`Nuovo check avviato: "${title}".`, 'success');
+    }
+
+    function openReminderModal() {
+      const trip = appState.trips[appState.activeOrganizerCode];
+      if (!trip) return;
+      const chk = getSelectedCheck(trip);
+      const records = chk.records || {};
+      const missing = trip.passengers.filter(p => !(records[p.id] && records[p.id].present));
+
+      const namesEl = document.getElementById('reminder-missing-names');
+      namesEl.textContent = missing.length === 0 ? 'Nessuno (gruppo al completo)' : missing.map(m => m.name).join(', ');
+
+      const modeText = chk.type === 'bus' ? 'salire sul pullman' : 'raggiungere il punto di ritrovo';
+      const msg = `Avviso gruppo (${trip.name})
+` +
+        `Si ricorda di ${modeText} per "${chk.title}".
+` +
+        `Luogo: ${chk.location}
+` +
+        `Orario limite: ${chk.targetTime}
+` +
+        `Conferma la presenza su BusCheck con codice ${trip.code}.`;
+      document.getElementById('reminder-message-text').value = msg;
+      document.getElementById('reminder-modal').classList.remove('hidden');
+    }
+
+    function closeReminderModal() {
+      document.getElementById('reminder-modal').classList.add('hidden');
+    }
+
+    async function copyReminderMessage() {
+      const textarea = document.getElementById('reminder-message-text');
+      const text = textarea.value;
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+        } else {
+          textarea.select();
+          document.execCommand('copy');
+        }
+      } catch (e) {}
+      closeReminderModal();
+      showToast('Messaggio di avviso copiato negli appunti.', 'success');
+    }
+
+    function exportCheckpointCsv() {
+      const trip = appState.trips[appState.activeOrganizerCode];
+      if (!trip) return;
+      const chk = getSelectedCheck(trip);
+      if (!chk) return;
+
+      const rows = [['ID', 'Nome', 'Telefono', 'Stato', 'Orario Conferma', 'Posizione/Dettaglio', 'Nota']];
+      (trip.passengers || []).forEach(p => {
+        const rec = (chk.records && chk.records[p.id]) || {};
+        rows.push([
+          p.id,
+          p.name,
+          p.phone || '',
+          rec.present ? 'Presente' : 'Mancante',
+          rec.time || '',
+          rec.distance || '',
+          rec.note || ''
+        ]);
+      });
+
+      const csvContent = rows
+        .map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
+        .join('
+');
+
+      const blob = new Blob(['﻿' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `buscheck-${trip.code}-${chk.id}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('Report CSV esportato.', 'success');
+    }
+
+    function setFilter(filter) {
+      currentFilter = filter;
+      ['all', 'missing', 'present'].forEach(f => {
+        const btn = document.getElementById(`filter-${f}`);
+        if (f === filter) {
+          btn.classList.add('bg-white', 'text-slate-900', 'shadow-xs');
+          btn.classList.remove('text-slate-600');
+        } else {
+          btn.classList.remove('bg-white', 'text-slate-900', 'shadow-xs');
+          btn.classList.add('text-slate-600');
+        }
+      });
+      renderOrganizerDashboard();
+    }
+
+    function togglePassengerPresence(passengerId) {
+      const trip = appState.trips[appState.activeOrganizerCode];
+      if (!trip) return;
+      const chk = getSelectedCheck(trip);
+      const pax = trip.passengers.find(p => p.id === passengerId);
+      if (!chk || !pax) return;
+
+      if (!chk.records) chk.records = {};
+      const prev = chk.records[passengerId] || { present: false, time: null, distance: null, note: '' };
+      const nowPresent = !prev.present;
+
+      chk.records[passengerId] = {
+        ...prev,
+        present: nowPresent,
+        time: nowPresent ? formatTimeNow() : null,
+        distance: nowPresent ? (prev.distance || 'Confermato dal responsabile') : prev.distance
+      };
+
+      saveState();
+      refreshCurrentView();
+      showToast(`${pax.name}: ${nowPresent ? 'segnato Presente' : 'segnato Mancante'}.`, nowPresent ? 'success' : 'warning');
+    }
+
+    async function copyTripCode() {
+      const code = appState.activeOrganizerCode;
+      if (!code) return;
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(code);
+          showToast(`Codice viaggio ${code} copiato negli appunti.`, 'success');
+          return;
+        }
+      } catch (e) {}
+
+      const tempInput = document.createElement('input');
+      tempInput.value = code;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      try {
+        document.execCommand('copy');
+        showToast(`Codice viaggio ${code} copiato negli appunti.`, 'success');
+      } catch (e) {
+        showToast(`Codice viaggio: ${code}`, 'info');
+      }
+      document.body.removeChild(tempInput);
+    }
+
+    function openAddPassengerModal() {
+      document.getElementById('add-passenger-modal').classList.remove('hidden');
+      document.getElementById('manual-pax-name').focus();
+    }
+
+    function closeAddPassengerModal() {
+      document.getElementById('add-passenger-modal').classList.add('hidden');
+    }
+
+    function addManualPassenger(event) {
+      event.preventDefault();
+      const trip = appState.trips[appState.activeOrganizerCode];
+      if (!trip) return;
+
+      const name = document.getElementById('manual-pax-name').value.trim();
+      const phone = document.getElementById('manual-pax-phone').value.trim();
+      const present = document.getElementById('manual-pax-present').checked;
+      if (!name) return;
+
+      const nextNum = trip.passengers.length + 1;
+      const id = 'P' + String(nextNum).padStart(2, '0');
+      trip.passengers.push({ id, name, phone });
+
+      const chk = getSelectedCheck(trip);
+      if (chk) {
+        if (!chk.records) chk.records = {};
+        chk.records[id] = {
+          present,
+          time: present ? formatTimeNow() : null,
+          distance: present ? 'Registrato dal responsabile' : null,
+          note: ''
+        };
+      }
+
+      document.getElementById('manual-pax-name').value = '';
+      document.getElementById('manual-pax-phone').value = '';
+      closeAddPassengerModal();
+      saveState();
+      refreshCurrentView();
+      showToast(`${name} aggiunto al gruppo.`, 'success');
+    }
+
+    // ==================== LOGICA PASSEGGERO ====================
+    function renderPassengerView() {
+      const session = appState.passengerSession;
+      if (!session || !appState.trips[session.code]) {
+        document.getElementById('passenger-join-card').classList.remove('hidden');
+        document.getElementById('passenger-active-card').classList.add('hidden');
+        return;
+      }
+
+      const trip = appState.trips[session.code];
+      const pax = trip.passengers.find(p => p.id === session.passengerId);
+      const activeCheck = getActiveCheck(trip);
+      if (!pax || !activeCheck) {
+        appState.passengerSession = null;
+        saveState(false);
+        renderPassengerView();
+        return;
+      }
+
+      document.getElementById('passenger-join-card').classList.add('hidden');
+      document.getElementById('passenger-active-card').classList.remove('hidden');
+
+      document.getElementById('pax-trip-code').textContent = trip.code;
+      document.getElementById('pax-trip-name').textContent = trip.name;
+      document.getElementById('pax-user-name').textContent = pax.name;
+      document.getElementById('pax-user-badge').textContent = '#' + pax.id;
+
+      const typeBadge = document.getElementById('pax-check-type-badge');
+      const instructionEl = document.getElementById('pax-instruction-text');
+      if (activeCheck.type === 'bus') {
+        typeBadge.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-emerald-500 text-slate-950';
+        typeBadge.textContent = 'A bordo Pullman';
+        instructionEl.textContent = 'Quando sei a bordo del pullman, premi il pulsante qui sotto per confermare.';
+      } else {
+        typeBadge.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-indigo-500 text-white';
+        typeBadge.textContent = 'Punto di Ritrovo Esterno';
+        instructionEl.textContent = 'Quando sei arrivato al punto di ritrovo, premi il pulsante qui sotto per confermare.';
+      }
+
+      document.getElementById('pax-checkpoint').textContent = activeCheck.title;
+      document.getElementById('pax-check-location').textContent = activeCheck.location || 'Punto principale';
+      document.getElementById('pax-check-time').textContent = activeCheck.targetTime || '--:--';
+
+      const rec = (activeCheck.records && activeCheck.records[pax.id]) || { present: false, time: null, distance: null, note: '' };
+      const unconfirmedBox = document.getElementById('pax-unconfirmed-box');
+      const confirmedBox = document.getElementById('pax-confirmed-box');
+
+      if (rec.present) {
+        unconfirmedBox.classList.add('hidden');
+        confirmedBox.classList.remove('hidden');
+        document.getElementById('pax-confirmed-summary').textContent =
+          `Presenza confermata alle ${rec.time || formatTimeNow()} — ${activeCheck.title}`;
+
+        const distBadge = document.getElementById('pax-distance-badge');
+        if (rec.distance) {
+          distBadge.textContent = rec.distance;
+          distBadge.classList.remove('hidden');
+        } else {
+          distBadge.classList.add('hidden');
+        }
+      } else {
+        unconfirmedBox.classList.remove('hidden');
+        confirmedBox.classList.add('hidden');
+      }
+
+      const noteEl = document.getElementById('pax-current-note');
+      if (rec.note) {
+        noteEl.textContent = `Segnalazione inviata al responsabile: "${rec.note}"`;
+        noteEl.classList.remove('hidden');
+      } else {
+        noteEl.classList.add('hidden');
+      }
+    }
+
+    function joinTripAsPassenger(event) {
+      event.preventDefault();
+      const rawCode = document.getElementById('join-code-input').value.trim().toUpperCase();
+      const name = document.getElementById('join-name-input').value.trim();
+      const phone = document.getElementById('join-phone-input').value.trim();
+
+      if (!rawCode || !name) return;
+
+      const trip = appState.trips[rawCode];
+      if (!trip) {
+        showToast(`Nessun viaggio trovato con codice "${rawCode}". Verifica il codice con il responsabile.`, 'error');
+        return;
+      }
+
+      let pax = trip.passengers.find(p => p.name.toLowerCase() === name.toLowerCase());
+      if (!pax) {
+        const nextNum = trip.passengers.length + 1;
+        pax = {
+          id: 'P' + String(nextNum).padStart(2, '0'),
+          name,
+          phone
+        };
+        trip.passengers.push(pax);
+      } else if (phone) {
+        pax.phone = phone;
+      }
+
+      appState.passengerSession = { code: rawCode, passengerId: pax.id };
+      saveState();
+      refreshCurrentView();
+      showToast(`Collegato a ${trip.name} come ${pax.name}.`, 'success');
+    }
+
+    function confirmMyPresence() {
+      const session = appState.passengerSession;
+      if (!session) return;
+      const trip = appState.trips[session.code];
+      const activeCheck = getActiveCheck(trip);
+      if (!trip || !activeCheck) return;
+
+      if (!activeCheck.records) activeCheck.records = {};
+      const prev = activeCheck.records[session.passengerId] || {};
+      const defaultDist = activeCheck.type === 'bus' ? 'A bordo Pullman' : 'Al punto di ritrovo';
+
+      activeCheck.records[session.passengerId] = {
+        ...prev,
+        present: true,
+        time: formatTimeNow(),
+        distance: prev.distance || defaultDist
+      };
+
+      saveState();
+      refreshCurrentView();
+      showToast('Presenza confermata per la tappa attiva.', 'success');
+    }
+
+    function requestPassengerLocation() {
+      const session = appState.passengerSession;
+      if (!session) return;
+      const trip = appState.trips[session.code];
+      const activeCheck = getActiveCheck(trip);
+      if (!trip || !activeCheck) return;
+
+      const statusText = document.getElementById('gps-status-text');
+      const btn = document.getElementById('gps-toggle-btn');
+      btn.textContent = 'Rilevamento...';
+
+      if (!('geolocation' in navigator)) {
+        statusText.textContent = 'Geolocalizzazione non supportata dal browser.';
+        btn.textContent = 'Condividi Posizione';
+        showToast('Geolocalizzazione non disponibile su questo dispositivo.', 'warning');
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = pos.coords.latitude.toFixed(5);
+          const lon = pos.coords.longitude.toFixed(5);
+          const acc = Math.round(pos.coords.accuracy || 10);
+          const label = `GPS ${lat}, ${lon} (±${acc}m)`;
+
+          if (!activeCheck.records) activeCheck.records = {};
+          const prev = activeCheck.records[session.passengerId] || { present: false };
+          activeCheck.records[session.passengerId] = { ...prev, distance: label };
+          statusText.textContent = `Posizione condivisa: ${label}`;
+          btn.textContent = 'Aggiornata';
+          saveState();
+          refreshCurrentView();
+          showToast('Posizione condivisa con il responsabile.', 'success');
+        },
+        () => {
+          statusText.textContent = 'Permesso posizione negato o non disponibile.';
+          btn.textContent = 'Condividi Posizione';
+          showToast('Impossibile rilevare la posizione GPS.', 'warning');
+        },
+        { timeout: 6000, enableHighAccuracy: true }
+      );
+    }
+
+    function sendQuickNote(text) {
+      const session = appState.passengerSession;
+      if (!session) return;
+      const trip = appState.trips[session.code];
+      const activeCheck = getActiveCheck(trip);
+      if (!trip || !activeCheck) return;
+
+      if (!activeCheck.records) activeCheck.records = {};
+      const prev = activeCheck.records[session.passengerId] || { present: false };
+      activeCheck.records[session.passengerId] = { ...prev, note: text };
+
+      saveState();
+      refreshCurrentView();
+      showToast('Segnalazione inviata al responsabile.', 'success');
+    }
+
+    function sendCustomNote(event) {
+      event.preventDefault();
+      const input = document.getElementById('custom-note-input');
+      const text = input.value.trim();
+      if (!text) return;
+      sendQuickNote(text);
+      input.value = '';
+    }
+
+    function leavePassengerSession() {
+      appState.passengerSession = null;
+      saveState(false);
+      renderPassengerView();
+    }
+
+    // ==================== MODAL INFO ====================
+    function openInfoModal() {
+      document.getElementById('info-modal').classList.remove('hidden');
+    }
+
+    function closeInfoModal() {
+      document.getElementById('info-modal').classList.add('hidden');
+    }
+
+    // Inizializzazione all'avvio
+    window.addEventListener('DOMContentLoaded', () => {
+      loadState();
+      switchView('home');
+    });
+
+    // ==================== PWA: SERVICE WORKER & INSTALLAZIONE ====================
+    let deferredInstallPrompt = null;
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+      const installBtn = document.getElementById('install-app-btn');
+      if (installBtn) {
+        installBtn.classList.remove('hidden');
+        installBtn.classList.add('inline-flex');
+      }
+    });
+
+    window.addEventListener('appinstalled', () => {
+      deferredInstallPrompt = null;
+      const installBtn = document.getElementById('install-app-btn');
+      if (installBtn) {
+        installBtn.classList.add('hidden');
+        installBtn.classList.remove('inline-flex');
+      }
+      showToast('BusCheck installata sul dispositivo.', 'success');
+    });
+
+    async function triggerInstallPrompt() {
+      if (!deferredInstallPrompt) {
+        showToast('Per installare su iPhone: Condividi → Aggiungi a schermata Home.', 'info');
+        return;
+      }
+      deferredInstallPrompt.prompt();
+      const { outcome } = await deferredInstallPrompt.userChoice;
+      if (outcome === 'accepted') {
+        deferredInstallPrompt = null;
+      }
+    }
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch((err) => {
+          console.warn('Service Worker non registrato:', err);
+        });
+      });
+    }
+  </script>
+</body>
+</html>
