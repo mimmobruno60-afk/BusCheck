@@ -987,8 +987,8 @@
             records: {}
           }
         ]
-      }try setDoc(doc(db, "Statiautobus", code), appState.trips[code]);
-            ;catch & console.error} catch {console.error (e)}
+      }setDoc(doc(db, "Statiautobus", code), appState.trips[code]);
+            ;
       appState.activeOrganizerCode = code;
       appState.selectedCheckId = firstCheckId;
       saveState();
