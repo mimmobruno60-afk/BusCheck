@@ -987,8 +987,9 @@
             records: {}
           }
         ]
-      }setDoc(doc(db, "Statiautobus", code), appState.trips[code]);
-            ;
+      }
+        setDoc (doc(db, "Statiautobus", code), appState.trips[code]);
+            
       appState.activeOrganizerCode = code;
       appState.selectedCheckId = firstCheckId;
       saveState();
